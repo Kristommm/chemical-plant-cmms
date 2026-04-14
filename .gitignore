@@ -1,0 +1,14 @@
+# --- Frontend (Node/React) ---
+cmms-frontend/node_modules/
+cmms-frontend/dist/
+cmms-frontend/.env
+
+# --- Backend (Python/FastAPI) ---
+cmms-backend/venv/
+cmms-backend/__pycache__/
+cmms-backend/.env
+cmms-backend/alembic.ini
+
+# --- OS Generated Files ---
+.DS_Store
+Thumbs.db
