@@ -3,23 +3,34 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, func, Enum as SQLEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# --- Base Class for all models ---
 class Base(DeclarativeBase):
     pass
 
-# --- 1. The Role Enum ---
 class UserRole(str, enum.Enum):
-    """
-    Inheriting from 'str' ensures the enum values are serialized as standard 
-    strings in JSON responses (crucial for FastAPI/Pydantic compatibility).
-    """
     SYSTEM_ADMIN = "System Admin"
     PLANT_MANAGER = "Plant Manager"
     RELIABILITY_ENGINEER = "Reliability Engineer"
     TECHNICIAN = "Technician"
     OPERATOR = "Operator"
 
-# --- 2. The User Model ---
+class UserDepartment(str, enum.Enum):
+    FATTY_ACID_PLANT = "Fatty Acid Plant"
+    FATTY_ALCOHOL_PLANT = "Fatty Alcohol Plant"
+    REFINERY_PLANT = "Refinery Plant"
+    PRODUCTION = "Production"
+    ELECTRICAL = "Electrical"
+    MECHANICAL = "Mechanical"
+    UTILITIES = "Utilities"
+    INSTRUMENTATION = "Instrumentation"
+    WAREHOUSE = "Warehouse"
+    LOGISTICS = "Logistics"
+    CIVIL = "Civil"
+    HR_ADMIN = "Human Resources and Admin"
+    HSSE = "Health, Safety, Security and Environment"
+    QA = "Quality Assurance"
+    ACCOUNTING = "Accounting"
+    LEGAL = "Legal"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -40,6 +51,12 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole, name="user_role_enum", create_constraint=True),
         default=UserRole.TECHNICIAN,
+        nullable=False
+    )
+
+    department: Mapped[UserDepartment] = mapped_column(
+        SQLEnum(UserDepartment, name="user_department_enum", create_constraint=True),
+        default=UserDepartment.MECHANICAL,
         nullable=False
     )
 

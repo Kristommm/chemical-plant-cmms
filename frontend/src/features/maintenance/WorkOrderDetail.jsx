@@ -1,111 +1,182 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const WorkOrderDetail = () => {
-  const { id } = useParams(); // Grabs the ID from the URL (e.g., 'WO-1042')
+  const { id } = useParams();
   const navigate = useNavigate();
+  
+  // 1. We pull the 'user' object from context alongside the token
+  const { token, user } = useContext(AuthContext);
+
   const [workOrder, setWorkOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Simulate fetching the specific work order details
   useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      // In reality, this would be: await axios.get(`/api/v1/work-orders/${id}`)
-      setWorkOrder({
-        id: id,
-        title: id === 'WO-1042' ? 'Replace seal on Agitator' : 'General Maintenance',
-        description: 'The primary mechanical seal on the agitator shaft is weeping fluid. Requires immediate lockout/tagout, draining of the vessel, and seal replacement. Ensure compatible perfluoroelastomer O-rings are used.',
-        assetId: 'Reactor B',
-        assetLocation: 'Polymerization Unit 1',
-        priority: 'High',
-        status: 'In Progress',
-        type: 'Corrective',
-        assignedTo: 'Maintenance Tech - Team Alpha',
-        dateCreated: '2026-04-14',
-        lastUpdated: '2026-04-14 10:30 AM',
-        tasks: [
-          { step: 1, desc: 'Secure Permit to Work and apply LOTO', completed: true },
-          { step: 2, desc: 'Drain vessel and flush', completed: false },
-          { step: 3, desc: 'Remove agitator motor and gearbox', completed: false },
-          { step: 4, desc: 'Replace mechanical seal', completed: false },
-        ]
+    const fetchWorkOrder = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/work-orders/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) throw new Error('Work order not found');
+          throw new Error('Failed to fetch work order details');
+        }
+
+        const data = await response.json();
+        setWorkOrder(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkOrder();
+  }, [id, token]);
+
+  const handleStatusChange = async (e) => {
+    const newStatus = e.target.value;
+    setIsUpdating(true);
+    
+    try {
+      const response = await fetch(`http://localhost:8000/work-orders/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
       });
-      setIsLoading(false);
-    }, 400);
-  }, [id]);
 
-  if (isLoading) {
-    return <div className="dashboard-container"><p>Loading Work Order {id}...</p></div>;
-  }
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Show the backend error message if the API rejects it
+        throw new Error(errorData.detail || 'Failed to update status'); 
+      }
 
-  if (!workOrder) {
-    return <div className="dashboard-container"><p>Work Order not found.</p></div>;
-  }
+      const updatedWO = await response.json();
+      setWorkOrder(updatedWO); 
+    } catch (err) {
+      alert(`Error updating status: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getPriorityStyle = (priority) => {
+    switch(priority) {
+      case 'Urgent': return { bg: '#fee2e2', text: '#991b1b' };
+      case 'High':   return { bg: '#ffedd5', text: '#c2410c' };
+      case 'Medium': return { bg: '#dbeafe', text: '#1e40af' };
+      case 'Low':    return { bg: '#dcfce7', text: '#166534' };
+      default:       return { bg: '#f1f5f9', text: '#475569' };
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  if (isLoading) return <div style={{ padding: '2rem' }}>Loading work order details...</div>;
+  if (error) return <div style={{ padding: '2rem', color: '#991b1b' }}>Error: {error}</div>;
+  if (!workOrder || !user) return null;
+
+  const priorityStyle = getPriorityStyle(workOrder.priority);
+
+  // --- 2. Calculate Authorization ---
+  // The user can edit if they are in the same department OR if they are a System Admin
+  const canEditStatus = user.department === workOrder.creator.department || user.role === 'System Admin';
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-        <button className="btn-secondary" onClick={() => navigate('/maintenance')}>&larr; Back</button>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h1 style={{ margin: 0 }}>{workOrder.id}: {workOrder.title}</h1>
-            <span className={`badge ${workOrder.priority.toLowerCase()}`}>{workOrder.priority}</span>
-          </div>
-          <p className="date-display">Created on {workOrder.dateCreated} • Last updated {workOrder.lastUpdated}</p>
-        </div>
-      </header>
+    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+      
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem' }}>
+        <button onClick={() => navigate('/maintenance')} style={{ marginRight: '1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b' }}>
+          &larr; Back to List
+        </button>
+        <h2 style={{ margin: 0, color: '#0f172a' }}>WO-{workOrder.id}: {workOrder.title}</h2>
+      </div>
 
-      <div className="asset-layout"> {/* Reusing the split layout from Assets */}
+      <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         
-        {/* Left Column: Core Details */}
-        <div className="asset-details-panel action-panel">
-          <h3>Job Overview</h3>
-          <div className="details-grid" style={{ marginTop: '1rem' }}>
-            <div className="detail-item">
-              <label>Status</label>
-              <p><span className={`badge ${workOrder.status === 'Closed' ? 'permit' : 'work'}`}>{workOrder.status}</span></p>
+        <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ color: '#64748b', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem' }}>Current Status</span>
+            
+            {/* --- 3. Conditional Rendering based on Authorization --- */}
+            {isUpdating ? (
+              <span style={{ fontWeight: '600', color: '#2563eb' }}>Updating...</span>
+            ) : canEditStatus ? (
+              <select 
+                value={workOrder.status} 
+                onChange={handleStatusChange}
+                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: '600', backgroundColor: 'white', cursor: 'pointer' }}
+              >
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Pending Approval">Pending Approval</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Closed">Closed</option>
+              </select>
+            ) : (
+              // If they don't have permission, just show the status text
+              <div>
+                <span style={{ padding: '0.5rem 1rem', borderRadius: '4px', backgroundColor: '#e2e8f0', color: '#334155', fontWeight: '600', display: 'inline-block' }}>
+                  {workOrder.status}
+                </span>
+                <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                  (Only {workOrder.creator?.department || 'originating department'} can edit)
+                </span>
+              </div>
+            )}
+            
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ color: '#64748b', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem' }}>Priority Level</span>
+            <span style={{ padding: '0.4rem 1rem', borderRadius: '999px', fontSize: '0.9rem', fontWeight: '600', backgroundColor: priorityStyle.bg, color: priorityStyle.text }}>
+              {workOrder.priority}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+            <div>
+              <h4 style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Target Asset</h4>
+              <p style={{ fontSize: '1.1rem', fontWeight: '500', margin: 0 }}>{workOrder.target_asset}</p>
             </div>
-            <div className="detail-item">
-              <label>Maintenance Type</label>
-              <p>{workOrder.type}</p>
+            <div>
+              <h4 style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Maintenance Type</h4>
+              <p style={{ fontSize: '1.1rem', fontWeight: '500', margin: 0 }}>{workOrder.maintenance_type}</p>
             </div>
-            <div className="detail-item">
-              <label>Target Asset</label>
-              <p><strong>{workOrder.assetId}</strong> ({workOrder.assetLocation})</p>
+            <div>
+              <h4 style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Created At</h4>
+              <p style={{ margin: 0, color: '#334155' }}>{formatDate(workOrder.created_at)}</p>
             </div>
-            <div className="detail-item">
-              <label>Assigned To</label>
-              <p>{workOrder.assignedTo}</p>
+            <div>
+              <h4 style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Created By</h4>
+              <p style={{ fontSize: '1.1rem', fontWeight: '500', margin: 0, color: '#0f172a' }}>
+                {workOrder.creator?.full_name || 'Unknown User'}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>
+                {workOrder.creator?.department || ''} - {workOrder.creator?.role || ''}
+              </p>
             </div>
           </div>
 
-          <h3 style={{ marginTop: '2rem', marginBottom: '0.5rem' }}>Description</h3>
-          <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>{workOrder.description}</p>
-        </div>
+          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '2rem 0' }} />
 
-        {/* Right Column: Execution Checklist */}
-        <div className="asset-tree-panel action-panel">
-          <h3>Execution Checklist</h3>
-          <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {workOrder.tasks.map(task => (
-              <li key={task.step} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <input 
-                  type="checkbox" 
-                  checked={task.completed} 
-                  readOnly 
-                  style={{ marginTop: '4px', transform: 'scale(1.2)' }}
-                />
-                <span style={{ color: task.completed ? 'var(--text-secondary)' : 'var(--text-primary)', textDecoration: task.completed ? 'line-through' : 'none' }}>
-                  {task.desc}
-                </span>
-              </li>
-            ))}
-          </ul>
-          
-          <div style={{ marginTop: 'auto', paddingTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button className="btn-primary">Update Status</button>
-            <button className="btn-secondary" style={{ borderColor: 'var(--warning-red)', color: 'var(--warning-red)' }}>Link PTW / LOTO</button>
+          <div>
+            <h4 style={{ color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Description & Instructions</h4>
+            <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#334155' }}>
+              {workOrder.description}
+            </div>
           </div>
         </div>
       </div>

@@ -27,6 +27,9 @@ const MainLayout = () => {
             <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>
               {user.role}
             </p>
+            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7, marginTop: '2px', fontStyle: 'italic' }}>
+              {user.department}
+            </p>
           </div>
         )}
 

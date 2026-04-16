@@ -7,7 +7,8 @@ const RegisterPage = () => {
     email: '',
     full_name: '',
     password: '',
-    role: 'Technician' // Default role
+    role: 'Technician',
+    department: 'Mechanical' // Add this default
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -89,6 +90,28 @@ const RegisterPage = () => {
               <option value="Reliability Engineer">Reliability Engineer</option>
               <option value="Technician">Technician</option>
               <option value="Operator">Operator</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label>Department</label>
+            <select name="department" value={formData.department} onChange={handleChange}>
+              <option value="Fatty Acid Plant">Fatty Acid Plant</option>
+              <option value="Fatty Alcohol Plant">Fatty Alcohol Plant</option>
+              <option value="Refinery Plant">Refinery Plant</option>
+              <option value="Production">Production</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Mechanical">Mechanical</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Instrumentation">Instrumentation</option>
+              <option value="Warehouse">Warehouse</option>
+              <option value="Logistics">Logistics</option>
+              <option value="Civil">Civil</option>
+              <option value="Human Resources and Admin">Human Resources and Admin</option>
+              <option value="Health, Safety, Security and Environment">Health, Safety, Security and Environment</option>
+              <option value="Quality Assurance">Quality Assurance</option>
+              <option value="Accounting">Accounting</option>
+              <option value="Legal">Legal</option>
             </select>
           </div>
 
