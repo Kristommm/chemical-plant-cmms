@@ -1,13 +1,13 @@
 # --- Frontend (Node/React) ---
-cmms-frontend/node_modules/
-cmms-frontend/dist/
-cmms-frontend/.env
+frontend/node_modules/
+frontend/dist/
+frontend/.env
 
 # --- Backend (Python/FastAPI) ---
-cmms-backend/venv/
-cmms-backend/__pycache__/
-cmms-backend/.env
-cmms-backend/alembic.ini
+backend/venv/
+backend/__pycache__/
+backend/.env
+backend/alembic.ini
 
 # --- OS Generated Files ---
 .DS_Store
