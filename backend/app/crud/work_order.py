@@ -15,7 +15,6 @@ def create_work_order(db: Session, wo: WorkOrderCreate, user_id: int):
     Create a new work order. 
     Notice how 'user_id' is passed in separately to ensure security.
     """
-    # model_dump() converts the Pydantic object into a Python dictionary
     db_wo = WorkOrder(
         **wo.model_dump(),
         created_by_id=user_id 

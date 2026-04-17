@@ -1,8 +1,8 @@
-"""initial clean architecture
+"""Initial complete models with IT (recently added)
 
-Revision ID: 8513d5224cc3
+Revision ID: a2899fc7568d
 Revises: 
-Create Date: 2026-04-16 11:39:22.862763
+Create Date: 2026-04-17 11:28:31.756268
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '8513d5224cc3'
+revision: str = 'a2899fc7568d'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,11 +26,11 @@ def upgrade() -> None:
     sa.Column('full_name', sa.String(length=255), nullable=False),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
     sa.Column('role', sa.Enum('SYSTEM_ADMIN', 'PLANT_MANAGER', 'RELIABILITY_ENGINEER', 'TECHNICIAN', 'OPERATOR', name='user_role_enum', create_constraint=True), nullable=False),
-    sa.Column('department', sa.Enum('FATTY_ACID_PLANT', 'FATTY_ALCOHOL_PLANT', 'REFINERY_PLANT', 'PRODUCTION', 'ELECTRICAL', 'MECHANICAL', 'UTILITIES', 'INSTRUMENTATION', 'WAREHOUSE', 'LOGISTICS', 'CIVIL', 'HR_ADMIN', 'HSSE', 'QA', 'ACCOUNTING', 'LEGAL', name='user_department_enum', create_constraint=True), server_default='MECHANICAL', nullable=False),
+    sa.Column('department', sa.Enum('FATTY_ACID_PLANT', 'FATTY_ALCOHOL_PLANT', 'REFINERY_PLANT', 'PRODUCTION', 'ELECTRICAL', 'MECHANICAL', 'UTILITIES', 'INSTRUMENTATION', 'WAREHOUSE', 'LOGISTICS', 'CIVIL', 'HR_ADMIN', 'HSSE', 'QA', 'ACCOUNTING', 'LEGAL', 'IT', name='user_department_enum', create_constraint=True), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_users'))
     )
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_users_email'), ['email'], unique=True)
@@ -45,11 +45,11 @@ def upgrade() -> None:
     sa.Column('status', sa.Enum('OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL', 'SUSPENDED', 'CLOSED', name='wo_status_enum', create_constraint=True), nullable=False),
     sa.Column('maintenance_type', sa.Enum('CORRECTIVE', 'PREVENTIVE', 'MODIFICATION', name='wo_type_enum', create_constraint=True), nullable=False),
     sa.Column('created_by_id', sa.Integer(), nullable=False),
-    sa.Column('assigned_department', sa.Enum('FATTY_ACID_PLANT', 'FATTY_ALCOHOL_PLANT', 'REFINERY_PLANT', 'PRODUCTION', 'ELECTRICAL', 'MECHANICAL', 'UTILITIES', 'INSTRUMENTATION', 'WAREHOUSE', 'LOGISTICS', 'CIVIL', 'HR_ADMIN', 'HSSE', 'QA', 'ACCOUNTING', 'LEGAL', name='wo_assigned_dept_enum', create_constraint=True), nullable=True),
+    sa.Column('assigned_department', sa.Enum('FATTY_ACID_PLANT', 'FATTY_ALCOHOL_PLANT', 'REFINERY_PLANT', 'PRODUCTION', 'ELECTRICAL', 'MECHANICAL', 'UTILITIES', 'INSTRUMENTATION', 'WAREHOUSE', 'LOGISTICS', 'CIVIL', 'HR_ADMIN', 'HSSE', 'QA', 'ACCOUNTING', 'LEGAL', 'IT', name='wo_assigned_dept_enum', create_constraint=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name=op.f('fk_work_orders_created_by_id_users')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_work_orders'))
     )
     with op.batch_alter_table('work_orders', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_work_orders_id'), ['id'], unique=False)

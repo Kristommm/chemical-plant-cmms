@@ -3,8 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, func, Enum as SQLEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-class Base(DeclarativeBase):
-    pass
+from app.core.database import Base
 
 class UserRole(str, enum.Enum):
     SYSTEM_ADMIN = "System Admin"
@@ -30,6 +29,7 @@ class UserDepartment(str, enum.Enum):
     QA = "Quality Assurance"
     ACCOUNTING = "Accounting"
     LEGAL = "Legal"
+    IT = "IT"
 
 class User(Base):
     __tablename__ = "users"

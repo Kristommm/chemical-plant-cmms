@@ -41,9 +41,9 @@ def authenticate_user(db: Session, email: str, password: str):
     """
     user = get_user_by_email(db, email=email)
     if not user:
-        return False
+        return None
     
     if not verify_password(plain_password=password, hashed_password=user.hashed_password):
-        return False
+        return None
         
     return user

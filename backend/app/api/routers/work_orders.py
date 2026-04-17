@@ -14,7 +14,6 @@ def read_work_orders(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(deps.get_db),
-    # By adding this, the route is now protected!
     current_user: User = Depends(deps.get_current_user) 
 ):
     """
@@ -67,9 +66,7 @@ def update_work_order(
             status_code=status.HTTP_404_NOT_FOUND, 
             detail="Work order not found"
         )
-    
-    # --- NEW: Department Authorization Check ---
-    # Allow if the user is in the same department as the creator, OR if they are a System Admin
+
     if current_user.department != wo.creator.department and current_user.role != UserRole.SYSTEM_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
