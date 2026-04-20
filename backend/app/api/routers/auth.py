@@ -36,7 +36,7 @@ def login_for_access_token(
         )
 
     # Generate the JWT token using the user's ID
-    access_token = create_access_token(subject=user.id)
+    access_token = create_access_token(data={"sub": str(user.id)})
     
     return {
         "access_token": access_token,

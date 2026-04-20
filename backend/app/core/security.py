@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union
-from jose import jwt
+import jwt
 from passlib.context import CryptContext
 from app.core.config import settings
 
@@ -27,28 +27,18 @@ def get_password_hash(password: str) -> str:
 
 
 # --- JWT Token Setup ---
-def create_access_token(
-    subject: Union[str, Any], expires_delta: timedelta = None
-) -> str:
-    """
-    Generates a secure JSON Web Token (JWT) when a user logs in.
-    The 'subject' (sub) is usually the user's ID or email.
-    """
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    
+    # 3. USE modern timezone-aware UTC datetime
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        # Default expiration (e.g., 15 or 30 minutes depending on your setup)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        
+    to_encode.update({"exp": expire})
     
-    # The payload contains the data we want to embed in the token
-    to_encode = {"exp": expire, "sub": str(subject)}
-    
-    # We sign the token using our SECRET_KEY. If a malicious actor intercepts 
-    # the token and tries to change their ID to an Admin ID, the signature will break,
-    # and FastAPI will reject the request.
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
-    
+    # 4. ENCODE the token (The syntax is exactly the same as jose!)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
