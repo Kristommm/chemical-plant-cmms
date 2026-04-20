@@ -1,12 +1,16 @@
 import enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import String, Text, ForeignKey, DateTime, func, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.ptw import PermitToWork
 
-from app.models.user import Base, User, UserDepartment
+from app.models.user import User, UserDepartment
+from app.core.database import Base
 
-# --- 1. The Work Order Enums ---
+if TYPE_CHECKING:
+    from app.models.ptw import PermitToWork
+
 class WOPriority(str, enum.Enum):
     LOW = "Low"
     MEDIUM = "Medium"
@@ -79,6 +83,7 @@ class WorkOrder(Base):
     # --- ORM Relationships ---
     # These allow us to easily access the full User object from a Work Order instance (e.g., wo.creator.full_name)
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by_id])
+    permits: Mapped[list["PermitToWork"]] = relationship("PermitToWork", back_populates="work_order")
     
 
     def __repr__(self) -> str:
