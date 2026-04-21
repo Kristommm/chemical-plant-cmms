@@ -1,9 +1,12 @@
 import enum
 from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, func, Enum as SQLEnum
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
+from sqlalchemy.orm import  Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.moc import ManagementOfChange
 
 class UserRole(str, enum.Enum):
     SYSTEM_ADMIN = "System Admin"
@@ -44,10 +47,6 @@ class User(Base):
     # Security
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # --- The Cross-Database Magic for Enums ---
-    # In PostgreSQL, this creates a highly efficient native ENUM type.
-    # In SQLite, the 'create_constraint=True' creates a strict VARCHAR column 
-    # that rejects any string not found in the UserRole class.
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole, name="user_role_enum", create_constraint=True),
         default=UserRole.TECHNICIAN,
@@ -72,6 +71,12 @@ class User(Base):
         server_default=func.now(), 
         onupdate=func.now(), 
         nullable=False
+    )
+
+    initiated_mocs: Mapped[list["ManagementOfChange"]] = relationship(
+        "ManagementOfChange", 
+        foreign_keys="[ManagementOfChange.initiator_id]", 
+        back_populates="initiator"
     )
 
     def __repr__(self) -> str:

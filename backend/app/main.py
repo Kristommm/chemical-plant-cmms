@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routers import users, auth, work_orders, ptw
+from app.api.routers import users, auth, work_orders, ptw, moc
 
 app = FastAPI(
     title="CMMS Pro API",
@@ -21,6 +21,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(work_orders.router)
 app.include_router(ptw.router)
+app.include_router(moc.router)
 
 @app.get("/")
 def root():

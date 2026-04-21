@@ -7,19 +7,19 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
+    // ... (Keep all your exact fetch logic here, don't change the Javascript!)
     e.preventDefault();
     setMessage('');
     setIsSubmitting(true);
 
-    // Retrieve the token from wherever you saved it during login
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('cmms_token');
 
     try {
       const response = await fetch('http://localhost:8000/ptw/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // The Auth Bouncer
+          'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify({
           work_order_id: workOrderId,
@@ -32,13 +32,8 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
       if (response.ok) {
         const data = await response.json();
         setMessage(`Permit #${data.id} requested successfully!`);
-        
-        // If the dashboard passed down an onSuccess function, run it!
         if (onSuccess) {
-           // We add a tiny delay so the user can actually read the success message
-           setTimeout(() => {
-             onSuccess(); 
-           }, 800);
+           setTimeout(() => { onSuccess(); }, 800);
         }
       } else {
         const errorData = await response.json();
@@ -52,16 +47,17 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
   };
 
   return (
-    <div className="w-full">
-      <h3 className="text-lg font-bold mb-4 text-blue-900">Request Permit to Work (WO-{workOrderId})</h3>
+    <div style={{ padding: '1rem' }}>
+      <h3 style={{ marginTop: '0', marginBottom: '1rem' }}>Request Permit to Work (WO-{workOrderId})</h3>
       
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col">
-          <span className="mb-1 font-semibold text-gray-700">Permit Type</span>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Permit Type</label>
           <select 
             value={permitType} 
             onChange={(e) => setPermitType(e.target.value)}
-            className="p-2 border border-gray-300 rounded bg-white"
+            style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
           >
             <option value="General">General</option>
             <option value="Hot Work">Hot Work</option>
@@ -70,33 +66,37 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
             <option value="Line Breaking">Line Breaking</option>
             <option value="Working at Heights">Working at Heights</option>
           </select>
-        </label>
+        </div>
 
-        <label className="flex items-center gap-2 text-gray-800 font-medium">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input 
             type="checkbox" 
-            className="w-4 h-4 text-blue-600 rounded border-gray-300"
             checked={requiresLoto} 
             onChange={(e) => setRequiresLoto(e.target.checked)} 
+            style={{ width: '1.2rem', height: '1.2rem' }}
           />
-          Requires LOTO (Lockout/Tagout)
-        </label>
+          <label style={{ fontWeight: '500' }}>Requires LOTO (Lockout/Tagout)</label>
+        </div>
 
+        {/* Using YOUR custom button class here! */}
         <button 
           type="submit" 
           disabled={isSubmitting}
-          className={`py-2 px-4 rounded text-white font-bold transition-colors ${
-            isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
+          className="btn-primary"
+          style={{ width: 'fit-content', opacity: isSubmitting ? 0.7 : 1 }}
         >
           {isSubmitting ? 'Submitting...' : 'Submit Request'}
         </button>
       </form>
       
       {message && (
-        <p className={`mt-4 text-sm font-medium p-2 rounded ${
-          message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-        }`}>
+        <p style={{ 
+          marginTop: '1rem', 
+          padding: '0.75rem', 
+          borderRadius: '4px',
+          backgroundColor: message.includes('Error') ? '#f8d7da' : '#d4edda',
+          color: message.includes('Error') ? '#721c24' : '#155724'
+        }}>
           {message}
         </p>
       )}

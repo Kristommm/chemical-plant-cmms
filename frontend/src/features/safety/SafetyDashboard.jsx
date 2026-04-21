@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreatePermitForm from './CreatePermitForm';
+import CreateMOCForm from './CreateMOCForm';
 
 const SafetyDashboard = () => {
   const [permits, setPermits] = useState([]);
@@ -8,12 +9,13 @@ const SafetyDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showPermitForm, setShowPermitForm] = useState(false);
   const [error, setError] = useState(null);
+  const [showMocForm, setShowMocForm] = useState(false);
   
   const navigate = useNavigate();
 
-  // Function to fetch permits from FastAPI
+
   const fetchPermits = async () => {
-    const token = localStorage.getItem('cmms_token'); // Get the saved JWT
+    const token = localStorage.getItem('cmms_token');
     console.log("Token being sent:", token);
     
     try {
@@ -38,16 +40,32 @@ const SafetyDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    // 1. Fetch real permits from the backend
-    fetchPermits();
-
-    // 2. Keep the dummy MOC data until we build the MOC backend!
-    setMocs([
-      { id: 'MOC-204', title: 'Temporary Piping Bypass on Chiller', stage: 'Engineering Review', priority: 'High', date: '2026-04-12' },
-      { id: 'MOC-205', title: 'Upgrade Agitator Motor to 480V', stage: 'Draft', priority: 'Medium', date: '2026-04-14' },
-    ]);
+  const fetchMocs = async () => {
+    const token = localStorage.getItem('cmms_token'); 
     
+    try {
+      const response = await fetch('http://localhost:8000/moc/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMocs(data);
+      } else {
+        console.error("Failed to load MOCs");
+      }
+    } catch (err) {
+      console.error("Network error fetching MOCs", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermits();
+    fetchMocs();
     setIsLoading(false);
   }, [navigate]);
 
@@ -69,32 +87,58 @@ const SafetyDashboard = () => {
           <p className="text-gray-600">Manage hazardous work permits, LOTO, and plant modifications.</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="btn-secondary px-4 py-2 bg-gray-200 rounded" onClick={() => console.log('Initiate MOC')}>
-            + Initiate MOC
+          <button 
+            className="btn-secondary px-4 py-2 bg-gray-200 rounded" 
+            onClick={() => {
+              setShowMocForm(!showMocForm);
+              setShowPermitForm(false);
+            }}
+          >
+            {showMocForm ? 'Cancel MOC' : '+ Initiate MOC'}
           </button>
           
-          {/* Toggles our Create Permit Form */}
           <button 
             className="btn-primary px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" 
-            onClick={() => setShowPermitForm(!showPermitForm)}
+            onClick={() => {
+              setShowPermitForm(!showPermitForm);
+              setShowMocForm(false); // Forces the MOC form to close
+            }}
           >
             {showPermitForm ? 'Cancel Permit' : '+ Issue Permit'}
           </button>
         </div>
       </header>
 
-      {/* Conditionally render the creation form */}
-      {showPermitForm && (
-        <div className="mb-8 p-4 border-2 border-blue-200 rounded bg-blue-50">
-          <CreatePermitForm 
-             // Defaulting to WO 1 for testing. Later, users will select this.
-            workOrderId={1} 
-            // Pass the fetch function so the form can refresh the table after submitting
-            onSuccess={() => {
-              setShowPermitForm(false);
-              fetchPermits(); 
-            }} 
-          />
+      
+      {/* --- Dynamic Form Area --- */}
+      {(showPermitForm || showMocForm) && (
+        <div className="shadow-sm" style={{ 
+          padding: '2rem',         /* <-- Increased padding here! */
+          marginBottom: '2rem',    /* <-- Added margin below the form */
+          borderRadius: '8px',     /* <-- Softened the corners */
+          backgroundColor: showPermitForm ? '#f0f8ff' : '#fdf8ff',
+          border: `2px solid ${showPermitForm ? '#cce5ff' : '#e6ccff'}` 
+        }}>
+          
+          {showPermitForm && (
+            <CreatePermitForm 
+              workOrderId={1} 
+              onSuccess={() => {
+                setShowPermitForm(false);
+                fetchPermits(); 
+              }} 
+            />
+          )}
+
+          {showMocForm && (
+            <CreateMOCForm 
+              onSuccess={() => {
+                setShowMocForm(false);
+                fetchMocs(); 
+              }} 
+            />
+          )}
+
         </div>
       )}
 
@@ -165,7 +209,6 @@ const SafetyDashboard = () => {
       <section className="action-panel">
         <h2 className="text-xl font-bold mb-4">Management of Change (MOC)</h2>
         <table className="data-table w-full text-left border-collapse">
-          {/* MOC Table logic remains unchanged for now */}
           <thead>
             <tr className="border-b-2">
               <th className="p-2">MOC ID</th>
@@ -176,17 +219,34 @@ const SafetyDashboard = () => {
               <th className="p-2">Action</th>
             </tr>
           </thead>
-          <tbody>
-            {mocs.map((moc) => (
-              <tr key={moc.id} className="border-b">
-                <td className="p-2"><strong>{moc.id}</strong></td>
-                <td className="p-2">{moc.title}</td>
-                <td className="p-2">{moc.stage}</td>
-                <td className="p-2">{moc.priority}</td>
-                <td className="p-2">{moc.date}</td>
-                <td className="p-2"><button className="bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Audit Trail</button></td>
-              </tr>
-            ))}
+<tbody>
+            {mocs.length === 0 ? (
+              <tr><td colSpan="6" className="p-4 text-center text-gray-500">No active MOCs found.</td></tr>
+            ) : (
+              mocs.map((moc) => (
+                <tr key={moc.id} className="border-b">
+                  <td className="p-2"><strong>MOC-{moc.id}</strong></td>
+                  <td className="p-2">{moc.title}</td>
+                  <td className="p-2">
+                    <span className="px-2 py-1 rounded text-sm bg-gray-200">
+                      {moc.stage}
+                    </span>
+                  </td>
+                  <td className="p-2">
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      moc.priority === 'Emergency' ? 'bg-red-600 text-white' : 
+                      moc.priority === 'High' ? 'bg-red-200 text-red-800' : 
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {moc.priority}
+                    </span>
+                  </td>
+                  {/* Format the ISO date string to a readable format */}
+                  <td className="p-2">{new Date(moc.created_at).toLocaleDateString()}</td>
+                  <td className="p-2"><button className="bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Audit Trail</button></td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </section>
