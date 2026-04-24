@@ -1,13 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function CreatePermitForm({ workOrderId, onSuccess }) {
+export default function CreatePermitForm({ onSuccess }) {
+  const [workOrderId, setWorkOrderId] = useState('');
+  const [workOrders, setWorkOrders] = useState([]); // NEW: State to hold the list of WOs
   const [permitType, setPermitType] = useState('General');
   const [requiresLoto, setRequiresLoto] = useState(false);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // NEW: Fetch active Work Orders when the form loads
+  useEffect(() => {
+    const fetchWorkOrders = async () => {
+      const token = localStorage.getItem('cmms_token');
+      try {
+        // NOTE: Make sure this URL matches your actual Work Order endpoint!
+        const response = await fetch('http://localhost:8000/work-orders/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setWorkOrders(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch work orders for dropdown", error);
+      }
+    };
+
+    fetchWorkOrders();
+  }, []);
+
   const handleSubmit = async (e) => {
-    // ... (Keep all your exact fetch logic here, don't change the Javascript!)
     e.preventDefault();
     setMessage('');
     setIsSubmitting(true);
@@ -22,7 +48,7 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
           'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify({
-          work_order_id: workOrderId,
+          work_order_id: parseInt(workOrderId, 10), // Ensures it submits as a number
           permit_type: permitType,
           requires_loto: requiresLoto,
           requires_gas_testing: false
@@ -48,10 +74,36 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
 
   return (
     <div style={{ padding: '1rem' }}>
-      <h3 style={{ marginTop: '0', marginBottom: '1rem' }}>Request Permit to Work (WO-{workOrderId})</h3>
+      <h3 style={{ marginTop: '0', marginBottom: '1rem' }}>Request Permit to Work</h3>
       
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         
+        {/* UPDATED: Combo Input + Datalist */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Work Order ID</label>
+          <input 
+            required 
+            type="text" // Changed to text so searching feels more natural
+            list="work-orders-list" // Connects the input to the datalist below
+            value={workOrderId} 
+            onChange={(e) => setWorkOrderId(e.target.value)}
+            style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            placeholder="Type ID or search list..."
+            autoComplete="off" // Prevents browser autofill from covering the datalist
+          />
+          
+          {/* The hidden datalist that populates the dropdown */}
+          <datalist id="work-orders-list">
+            {workOrders.map((wo) => (
+              // The 'value' is what gets inserted into the input. 
+              // The text inside the tag is shown alongside it in the dropdown.
+              <option key={wo.id} value={wo.id}>
+                {wo.title || 'Work Order'} 
+              </option>
+            ))}
+          </datalist>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Permit Type</label>
           <select 
@@ -78,7 +130,6 @@ export default function CreatePermitForm({ workOrderId, onSuccess }) {
           <label style={{ fontWeight: '500' }}>Requires LOTO (Lockout/Tagout)</label>
         </div>
 
-        {/* Using YOUR custom button class here! */}
         <button 
           type="submit" 
           disabled={isSubmitting}

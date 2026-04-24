@@ -44,3 +44,38 @@ def read_mocs(
     """
     mocs = db.query(ManagementOfChange).offset(skip).limit(limit).all()
     return mocs
+
+@router.get("/{moc_id}", response_model=MOCRead)
+def get_single_moc(
+    moc_id: int, 
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Fetch all details for a single MOC."""
+    # Note: If you added the initiator relationship, you can joinedload it here just like PTW!
+    moc = db.query(ManagementOfChange).filter(ManagementOfChange.id == moc_id).first()
+    
+    if not moc:
+        raise HTTPException(status_code=404, detail="MOC not found")
+    return moc
+
+@router.patch("/{moc_id}/stage", response_model=MOCRead)
+def update_moc_stage(
+    moc_id: int, 
+    stage_update: MOCUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """Advance the MOC to the next stage of review."""
+    moc = db.query(ManagementOfChange).filter(ManagementOfChange.id == moc_id).first()
+    
+    if not moc:
+        raise HTTPException(status_code=404, detail="MOC not found")
+    
+    moc.stage = stage_update.stage
+    
+    # In a full app, you might also record current_user.id as the reviewer here!
+    
+    db.commit()
+    db.refresh(moc)
+    return moc

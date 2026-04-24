@@ -122,7 +122,6 @@ const SafetyDashboard = () => {
           
           {showPermitForm && (
             <CreatePermitForm 
-              workOrderId={1} 
               onSuccess={() => {
                 setShowPermitForm(false);
                 fetchPermits(); 
@@ -182,22 +181,58 @@ const SafetyDashboard = () => {
               <tr><td colSpan="7" className="p-4 text-center text-gray-500">No permits found.</td></tr>
             ) : (
               permits.map((permit) => (
-                <tr key={permit.id} className="border-b">
-                  <td className="p-2"><strong>PTW-{permit.id}</strong></td>
-                  <td className="p-2">WO-{permit.work_order_id}</td>
-                  <td className="p-2">
-                    <span className={`px-2 py-1 rounded text-sm ${permit.permit_type === 'Hot Work' ? 'bg-red-200 text-red-800' : 'bg-gray-200'}`}>
+                <tr key={permit.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '0.75rem' }}><strong>PTW-{permit.id}</strong></td>
+                  <td style={{ padding: '0.75rem' }}>WO-{permit.work_order_id}</td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.875rem',
+                      backgroundColor: permit.permit_type === 'Hot Work' ? '#f8d7da' : '#e2e3e5',
+                      color: permit.permit_type === 'Hot Work' ? '#721c24' : '#383d41'
+                    }}>
                       {permit.permit_type}
                     </span>
                   </td>
-                  <td className="p-2">User {permit.requested_by_id}</td>
-                  <td className="p-2">
-                    <span className={`px-2 py-1 rounded text-sm ${permit.status === 'Active' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}`}>
+                  
+                  <td style={{ padding: '0.75rem' }}>{permit.requested_by?.full_name}</td>
+                  
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.875rem',
+                      backgroundColor: permit.status === 'Active' ? '#d4edda' : '#fff3cd',
+                      color: permit.status === 'Active' ? '#155724' : '#856404'
+                    }}>
                       {permit.status}
                     </span>
                   </td>
-                  <td className="p-2">{permit.requires_loto ? '🔴 Yes' : '⚪ No'}</td>
-                  <td className="p-2"><button className="bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Review</button></td>
+                  <td style={{ padding: '0.75rem' }}>{permit.requires_loto ? '🔴 Yes' : '⚪ No'}</td>
+                  
+                  {/* UPDATE: The Modernized Review Button */}
+                  <td style={{ padding: '0.75rem' }}>
+                    <button
+                    onClick={() => navigate(`/permit/${permit.id}`)} 
+                    style={{
+                      backgroundColor: '#f1f5f9',
+                      color: '#0f172a',
+                      border: '1px solid #cbd5e1',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onMouseEnter={(e) => { e.target.style.backgroundColor = '#e2e8f0'; e.target.style.borderColor = '#94a3b8'; }}
+                    onMouseLeave={(e) => { e.target.style.backgroundColor = '#f1f5f9'; e.target.style.borderColor = '#cbd5e1'; }}
+                    >
+                      Review
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -219,31 +254,69 @@ const SafetyDashboard = () => {
               <th className="p-2">Action</th>
             </tr>
           </thead>
-<tbody>
+          <tbody>
             {mocs.length === 0 ? (
-              <tr><td colSpan="6" className="p-4 text-center text-gray-500">No active MOCs found.</td></tr>
+              <tr><td colSpan="6" style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>No active MOCs found.</td></tr>
             ) : (
               mocs.map((moc) => (
-                <tr key={moc.id} className="border-b">
-                  <td className="p-2"><strong>MOC-{moc.id}</strong></td>
-                  <td className="p-2">{moc.title}</td>
-                  <td className="p-2">
-                    <span className="px-2 py-1 rounded text-sm bg-gray-200">
+                <tr key={moc.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '0.75rem' }}><strong>MOC-{moc.id}</strong></td>
+                  <td style={{ padding: '0.75rem' }}>{moc.title}</td>
+                  
+                  {/* Stage Badge */}
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.875rem',
+                      backgroundColor: '#e2e8f0', // Clean gray for the stage
+                      color: '#334155'
+                    }}>
                       {moc.stage}
                     </span>
                   </td>
-                  <td className="p-2">
-                    <span className={`px-2 py-1 rounded text-sm ${
-                      moc.priority === 'Emergency' ? 'bg-red-600 text-white' : 
-                      moc.priority === 'High' ? 'bg-red-200 text-red-800' : 
-                      'bg-blue-100 text-blue-800'
-                    }`}>
+                  
+                  {/* Priority Badge - Color Coded */}
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.875rem',
+                      backgroundColor: moc.priority === 'Emergency' ? '#f8d7da' : 
+                                       moc.priority === 'High' ? '#fff3cd' : 
+                                       moc.priority === 'Medium' ? '#d1ecf1' : '#e2e3e5',
+                      color: moc.priority === 'Emergency' ? '#721c24' : 
+                             moc.priority === 'High' ? '#856404' : 
+                             moc.priority === 'Medium' ? '#0c5460' : '#383d41'
+                    }}>
                       {moc.priority}
                     </span>
                   </td>
-                  {/* Format the ISO date string to a readable format */}
-                  <td className="p-2">{new Date(moc.created_at).toLocaleDateString()}</td>
-                  <td className="p-2"><button className="bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Audit Trail</button></td>
+                  
+                  <td style={{ padding: '0.75rem' }}>{new Date(moc.created_at).toLocaleDateString()}</td>
+                  
+                  {/* The Modernized Audit Trail Button */}
+                  <td style={{ padding: '0.75rem' }}>
+                    <button 
+                    onClick={() => navigate(`/moc/${moc.id}`)}
+                    style={{
+                      backgroundColor: '#f1f5f9',
+                      color: '#0f172a',
+                      border: '1px solid #cbd5e1',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onMouseEnter={(e) => { e.target.style.backgroundColor = '#e2e8f0'; e.target.style.borderColor = '#94a3b8'; }}
+                    onMouseLeave={(e) => { e.target.style.backgroundColor = '#f1f5f9'; e.target.style.borderColor = '#cbd5e1'; }}
+                    >
+                      Audit Trail
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

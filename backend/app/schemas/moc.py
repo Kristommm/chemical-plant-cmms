@@ -3,6 +3,10 @@ from typing import Optional
 from datetime import datetime
 from app.models.moc import MOCStage, MOCPriority, MOCCategory
 
+class MOCStageUpdate(BaseModel):
+    """Payload for advancing an MOC through its review lifecycle."""
+    stage: MOCStage
+
 class MOCBase(BaseModel):
     title: str
     description: str

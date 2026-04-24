@@ -3,6 +3,11 @@ from typing import Optional
 from datetime import datetime
 from app.models.ptw import PermitType, PermitStatus
 
+
+class UserCompact(BaseModel):
+    full_name: str
+    model_config =ConfigDict(from_attributes=True)
+
 class PTWBase(BaseModel):
     work_order_id: int
     permit_type: PermitType
@@ -26,6 +31,7 @@ class PTWRead(PTWBase):
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     requested_by_id: int
+    requested_by: Optional[UserCompact] = None
     approved_by_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

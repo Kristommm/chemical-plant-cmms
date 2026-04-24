@@ -12,6 +12,8 @@ import AssetHierarchy from '../features/assets/AssetHierarchy';
 import SafetyDashboard from '../features/safety/SafetyDashboard';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
+import PermitReview from '../features/safety/PermitReview';
+import MOCAuditTrail from '../features/safety/MOCAuditTrail';
 
 // --- Protected Route Wrapper ---
 const ProtectedRoute = ({ children }) => {
@@ -43,6 +45,8 @@ const AppRoutes = () => {
         </Route>
         <Route path="assets" element={<AssetHierarchy />} />
         <Route path="safety" element={<SafetyDashboard />} />
+        <Route path="/permit/:id" element={<PermitReview />} />
+        <Route path="/moc/:id" element={<MOCAuditTrail />} />
       </Route>
     </Routes>
   );
