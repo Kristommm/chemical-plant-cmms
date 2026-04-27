@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 const WorkOrderDetail = () => {
   const { id } = useParams();
@@ -17,51 +18,35 @@ const WorkOrderDetail = () => {
   useEffect(() => {
     const fetchWorkOrder = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/work-orders/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) throw new Error('Work order not found');
-          throw new Error('Failed to fetch work order details');
-        }
-
-        const data = await response.json();
-        setWorkOrder(data);
+        const response = await api.get(`/work-orders/${id}`);
+        setWorkOrder(response.data);
       } catch (err) {
-        setError(err.message);
+        // Axios makes checking specific HTTP error codes much cleaner
+        if (err.response && err.response.status === 404) {
+          setError('Work order not found');
+        } else {
+          setError(err.response?.data?.detail || 'Failed to fetch work order details');
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchWorkOrder();
-  }, [id, token]);
+  }, [id]); // Notice how 'token' is no longer needed in the dependency array!
 
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     setIsUpdating(true);
     
     try {
-      const response = await fetch(`http://localhost:8000/work-orders/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        // Show the backend error message if the API rejects it
-        throw new Error(errorData.detail || 'Failed to update status'); 
-      }
-
-      const updatedWO = await response.json();
-      setWorkOrder(updatedWO); 
+      // Just pass the URL and the data object. Axios handles headers and JSON formatting.
+      const response = await api.patch(`/work-orders/${id}`, { status: newStatus });
+      setWorkOrder(response.data); 
     } catch (err) {
-      alert(`Error updating status: ${err.message}`);
+      // Neatly extract the FastAPI HTTP exception detail
+      const errorMsg = err.response?.data?.detail || 'Failed to update status';
+      alert(`Error updating status: ${errorMsg}`);
     } finally {
       setIsUpdating(false);
     }

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api'; // Ensure this path points to your new api.js file
 
 export const AuthContext = createContext();
 
@@ -9,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Helper to parse the JWT payload without needing an external library
   const parseJwt = (t) => {
     try { return JSON.parse(atob(t.split('.')[1])); } 
     catch (e) { return null; }
@@ -20,17 +20,12 @@ export const AuthProvider = ({ children }) => {
     if (!payload || !payload.sub) return logout();
 
     try {
-      const response = await fetch(`http://localhost:8000/users/${payload.sub}`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        logout();
-      }
+      // Axios interceptor automatically attaches the token here!
+      const response = await api.get(`/users/${payload.sub}`);
+      setUser(response.data);
     } catch (error) {
       console.error("Failed to fetch user profile", error);
+      logout(); // If the token is expired/invalid, Axios throws an error and we log them out
     } finally {
       setIsLoading(false);
     }
@@ -46,26 +41,30 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    // FastAPI's OAuth2 expects URL-encoded form data, NOT JSON!
+    // FastAPI's OAuth2 still expects URL-encoded data
     const formData = new URLSearchParams();
     formData.append('username', email);
     formData.append('password', password);
 
-    const response = await fetch('http://localhost:8000/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData
-    });
-
-    if (!response.ok) throw new Error('Invalid credentials');
-
-    const data = await response.json();
-    setToken(data.access_token);
-    localStorage.setItem('cmms_token', data.access_token);
-    
-    // Fetch the user's name and role using the new token
-    await fetchUserProfile(data.access_token);
-    navigate('/');
+    try {
+      // Axios detects URLSearchParams and auto-sets the headers!
+      const response = await api.post('/login', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      const { access_token } = response.data;
+      setToken(access_token);
+      
+      // We set localStorage immediately so the api interceptor can use it on the next line
+      localStorage.setItem('cmms_token', access_token);
+      
+      await fetchUserProfile(access_token);
+      navigate('/');
+    } catch (error) {
+      throw new Error('Invalid credentials');
+    }
   };
 
   const logout = () => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
 export default function CreatePermitForm({ onSuccess }) {
   const [workOrderId, setWorkOrderId] = useState('');
@@ -38,35 +39,28 @@ export default function CreatePermitForm({ onSuccess }) {
     setMessage('');
     setIsSubmitting(true);
 
-    const token = localStorage.getItem('cmms_token');
-
     try {
-      const response = await fetch('http://localhost:8000/ptw/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({
-          work_order_id: parseInt(workOrderId, 10), // Ensures it submits as a number
-          permit_type: permitType,
-          requires_loto: requiresLoto,
-          requires_gas_testing: false
-        })
+      // Axios natively takes your object and formats it as a JSON payload
+      const response = await api.post('/ptw/', {
+        work_order_id: parseInt(workOrderId, 10), // Ensures it submits as a number
+        permit_type: permitType,
+        requires_loto: requiresLoto,
+        requires_gas_testing: false
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setMessage(`Permit #${data.id} requested successfully!`);
-        if (onSuccess) {
-           setTimeout(() => { onSuccess(); }, 800);
-        }
-      } else {
-        const errorData = await response.json();
-        setMessage(`Error: ${errorData.detail || 'Failed to create permit'}`);
+      // response.data holds the instantly parsed JSON from FastAPI
+      setMessage(`Permit #${response.data.id} requested successfully!`);
+      if (onSuccess) {
+         setTimeout(() => { onSuccess(); }, 800);
       }
     } catch (error) {
-      setMessage('Network error occurred. Is the FastAPI server running?');
+      // Differentiate between a FastAPI validation error (4xx/5xx) and a server crash/network failure
+      if (error.response) {
+        const errorMsg = error.response.data?.detail || 'Failed to create permit';
+        setMessage(`Error: ${errorMsg}`);
+      } else {
+        setMessage('Network error occurred. Is the FastAPI server running?');
+      }
     } finally {
       setIsSubmitting(false);
     }

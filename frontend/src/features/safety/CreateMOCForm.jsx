@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../../utils/api';
 
 export default function CreateMOCForm({ onSuccess }) {
   const [formData, setFormData] = useState({
@@ -26,30 +27,19 @@ export default function CreateMOCForm({ onSuccess }) {
     setMessage('');
     setIsSubmitting(true);
 
-    const token = localStorage.getItem('cmms_token'); 
-
     try {
-      const response = await fetch('http://localhost:8000/moc/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
+      // Axios handles the headers, token injection, and JSON.stringify automatically
+      const response = await api.post('/moc/', formData);
 
-      if (response.ok) {
-        const data = await response.json();
-        setMessage(`MOC #${data.id} initiated successfully!`);
-        if (onSuccess) {
-           setTimeout(() => onSuccess(), 800);
-        }
-      } else {
-        const errorData = await response.json();
-        setMessage(`Error: ${errorData.detail || 'Failed to create MOC'}`);
+      // The parsed JSON payload is immediately available in response.data
+      setMessage(`MOC #${response.data.id} initiated successfully!`);
+      if (onSuccess) {
+         setTimeout(() => onSuccess(), 800);
       }
     } catch (error) {
-      setMessage('Network error occurred.');
+      // Neatly extract the FastAPI validation error or fallback to a default
+      const errorMsg = error.response?.data?.detail || 'Failed to create MOC';
+      setMessage(`Error: ${errorMsg}`);
     } finally {
       setIsSubmitting(false);
     }

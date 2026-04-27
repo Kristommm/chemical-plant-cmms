@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 const WorkOrderList = () => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -25,17 +26,18 @@ const WorkOrderList = () => {
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
-        const response = await fetch('http://localhost:8000/work-orders/?limit=1000', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        // Axios automatically translates the params object into ?limit=1000
+        const response = await api.get('/work-orders/', {
+          params: { limit: 1000 } 
         });
 
-        if (!response.ok) throw new Error('Failed to fetch work orders');
-
-        const data = await response.json();
-        const sortedData = data.sort((a, b) => b.id - a.id);
+        // The JSON data is automatically parsed and waiting in response.data
+        const sortedData = response.data.sort((a, b) => b.id - a.id);
         setWorkOrders(sortedData);
       } catch (err) {
-        setError(err.message);
+        // Neatly extract the FastAPI error or fallback to a default message
+        const errorMsg = err.response?.data?.detail || 'Failed to fetch work orders';
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
       }

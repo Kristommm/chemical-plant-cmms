@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
 
 export default function MOCAuditTrail() {
   const { id } = useParams(); 
@@ -11,19 +12,15 @@ export default function MOCAuditTrail() {
 
   useEffect(() => {
     const fetchMoc = async () => {
-      const token = localStorage.getItem('cmms_token');
       try {
-        const response = await fetch(`http://localhost:8000/moc/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setMoc(data);
-        } else {
-          setMessage('MOC not found.');
-        }
+        const response = await api.get(`/moc/${id}`);
+        setMoc(response.data);
       } catch (error) {
-        setMessage('Network error fetching MOC details.');
+        if (error.response && error.response.status === 404) {
+          setMessage('MOC not found.');
+        } else {
+          setMessage('Network error fetching MOC details.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -32,28 +29,22 @@ export default function MOCAuditTrail() {
   }, [id]);
 
   const handleStageChange = async (newStage) => {
-    const token = localStorage.getItem('cmms_token');
     setMessage(''); 
     try {
-      const response = await fetch(`http://localhost:8000/moc/${id}/stage`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ stage: newStage })
-      });
+      // Axios handles the URL, payload stringification, and headers in one clean line
+      const response = await api.patch(`/moc/${id}/stage`, { stage: newStage });
 
-      if (response.ok) {
-        const updatedMoc = await response.json();
-        setMoc(updatedMoc);
-        setMessage(`MOC successfully advanced to ${newStage}.`);
-      } else {
-        const errorData = await response.json();
-        setMessage(`Error: ${errorData.detail || 'Failed to update stage.'}`);
-      }
+      // Update the UI with the freshly parsed JSON response
+      setMoc(response.data);
+      setMessage(`MOC successfully advanced to ${newStage}.`);
     } catch (error) {
-      setMessage('Network error while updating stage.');
+      // Extract the FastAPI validation error explicitly
+      if (error.response) {
+        const errorMsg = error.response.data?.detail || 'Failed to update stage.';
+        setMessage(`Error: ${errorMsg}`);
+      } else {
+        setMessage('Network error while updating stage.');
+      }
     }
   };
 

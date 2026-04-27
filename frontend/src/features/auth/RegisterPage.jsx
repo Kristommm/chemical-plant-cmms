@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../../utils/api'; // Import your Axios instance!
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -8,7 +9,7 @@ const RegisterPage = () => {
     full_name: '',
     password: '',
     role: 'Technician',
-    department: 'Mechanical' // Add this default
+    department: 'Mechanical' 
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -22,18 +23,8 @@ const RegisterPage = () => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8000/users/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Registration failed');
-      }
+      // Axios handles the JSON.stringify and the headers automatically!
+      await api.post('/users/', formData);
 
       // Show success message briefly, then redirect to login
       setSuccess(true);
@@ -42,7 +33,9 @@ const RegisterPage = () => {
       }, 2000);
 
     } catch (err) {
-      setError(err.message);
+      // Axios stores backend HTTP exception details neatly in response.data
+      const errorMsg = err.response?.data?.detail || 'Registration failed';
+      setError(errorMsg);
     }
   };
 
@@ -112,6 +105,7 @@ const RegisterPage = () => {
               <option value="Quality Assurance">Quality Assurance</option>
               <option value="Accounting">Accounting</option>
               <option value="Legal">Legal</option>
+              <option value="IT">IT</option>
             </select>
           </div>
 

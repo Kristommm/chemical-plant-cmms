@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
 
 export default function PermitReview() {
   const { id } = useParams(); 
@@ -11,19 +12,17 @@ export default function PermitReview() {
 
   useEffect(() => {
     const fetchPermit = async () => {
-      const token = localStorage.getItem('cmms_token');
       try {
-        const response = await fetch(`http://localhost:8000/ptw/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setPermit(data);
-        } else {
-          setMessage('Permit not found.');
-        }
+        // Axios handles the token injection and the URL formatting
+        const response = await api.get(`/ptw/${id}`);
+        setPermit(response.data);
       } catch (error) {
-        setMessage('Network error fetching permit details.');
+        // Easily catch 404s vs general network errors
+        if (error.response && error.response.status === 404) {
+          setMessage('Permit not found.');
+        } else {
+          setMessage('Network error fetching permit details.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -32,28 +31,22 @@ export default function PermitReview() {
   }, [id]);
 
   const handleStatusChange = async (newStatus) => {
-    const token = localStorage.getItem('cmms_token');
     setMessage(''); // Clear old messages
     try {
-      const response = await fetch(`http://localhost:8000/ptw/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
+      // Pass the route and the payload; Axios handles headers and stringification
+      const response = await api.patch(`/ptw/${id}/status`, { status: newStatus });
 
-      if (response.ok) {
-        const updatedPermit = await response.json();
-        setPermit(updatedPermit);
-        setMessage(`Permit successfully moved to ${newStatus}.`);
-      } else {
-        const errorData = await response.json();
-        setMessage(`Error: ${errorData.detail || 'Failed to update status.'}`);
-      }
+      // Update the state with the freshly parsed JSON response
+      setPermit(response.data);
+      setMessage(`Permit successfully moved to ${newStatus}.`);
     } catch (error) {
-      setMessage('Network error while updating status.');
+      // Cleanly extract the FastAPI validation error
+      if (error.response) {
+        const errorMsg = error.response.data?.detail || 'Failed to update status.';
+        setMessage(`Error: ${errorMsg}`);
+      } else {
+        setMessage('Network error while updating status.');
+      }
     }
   };
 

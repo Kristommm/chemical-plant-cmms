@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreatePermitForm from './CreatePermitForm';
 import CreateMOCForm from './CreateMOCForm';
+import api from '../../utils/api';
 
 const SafetyDashboard = () => {
   const [permits, setPermits] = useState([]);
@@ -15,51 +16,29 @@ const SafetyDashboard = () => {
 
 
   const fetchPermits = async () => {
-    const token = localStorage.getItem('cmms_token');
-    console.log("Token being sent:", token);
-    
     try {
-      const response = await fetch('http://localhost:8000/ptw/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`, // The Security Bouncer
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPermits(data);
-      } else if (response.status === 401) {
+      // The api interceptor handles the token injection invisibly
+      const response = await api.get('/ptw/');
+      
+      // Axios automatically parses the JSON payload into response.data
+      setPermits(response.data);
+    } catch (err) {
+      // Check if it's a 401 Unauthorized (token expired/missing) vs a general error
+      if (err.response && err.response.status === 401) {
         navigate('/login');
       } else {
         setError("Failed to load permits.");
       }
-    } catch (err) {
-      setError("Network error. Is the FastAPI server running?");
     }
   };
 
   const fetchMocs = async () => {
-    const token = localStorage.getItem('cmms_token'); 
-    
     try {
-      const response = await fetch('http://localhost:8000/moc/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setMocs(data);
-      } else {
-        console.error("Failed to load MOCs");
-      }
+      const response = await api.get('/moc/');
+      setMocs(response.data);
     } catch (err) {
-      console.error("Network error fetching MOCs", err);
+      // Axios error payload is tucked inside err.response
+      console.error("Network error fetching MOCs", err.response?.data || err.message);
     }
   };
 

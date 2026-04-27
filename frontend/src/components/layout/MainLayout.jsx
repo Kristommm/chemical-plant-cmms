@@ -1,9 +1,9 @@
 import React, { useContext } from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext'; // 1. Import the Context
+import { AuthContext } from '../../context/AuthContext';
 
 const MainLayout = () => {
-  // 2. Extract the user object and logout function from the global state
+
   const { user, logout } = useContext(AuthContext);
 
   return (
@@ -44,7 +44,7 @@ const MainLayout = () => {
         <button 
           onClick={logout}
           style={{
-            marginTop: 'auto', // Pushes the button to the bottom of the sidebar
+            marginTop: 'auto',
             padding: '1rem',
             background: 'transparent',
             border: 'none',

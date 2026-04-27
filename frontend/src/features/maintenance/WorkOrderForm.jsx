@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 const WorkOrderForm = () => {
   const navigate = useNavigate();
@@ -28,23 +29,15 @@ const WorkOrderForm = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/work-orders/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
+      // Axios handles the URL, the headers, the token, and stringifies the formData automatically
+      await api.post('/work-orders/', formData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create work order');
-      }
-
+      // If it succeeds, redirect straight back to the maintenance dashboard
       navigate('/maintenance');
     } catch (err) {
-      setError(err.message);
+      // Extract the FastAPI 400/422 validation error perfectly
+      const errorMsg = err.response?.data?.detail || 'Failed to create work order';
+      setError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
