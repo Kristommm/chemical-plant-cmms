@@ -4,9 +4,6 @@ import jwt
 from passlib.context import CryptContext
 from app.core.config import settings
 
-# --- Password Hashing Setup ---
-# We tell passlib to use the bcrypt algorithm. The 'deprecated="auto"' 
-# ensures that if bcrypt is ever updated, older hashes are still supported.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
