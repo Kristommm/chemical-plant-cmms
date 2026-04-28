@@ -1,7 +1,7 @@
 import enum
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
-from sqlalchemy import ForeignKey, DateTime, Enum
+from sqlalchemy import ForeignKey, DateTime, Enum, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.user import User
 
@@ -43,6 +43,7 @@ class PermitToWork(Base):
     # Timestamps (Timezone aware for accurate safety logs)
     valid_from: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     valid_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     
     # Signatures / Approval chain
     requested_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))

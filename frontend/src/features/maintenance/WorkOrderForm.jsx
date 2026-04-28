@@ -107,6 +107,7 @@ const WorkOrderForm = () => {
                 <option value="Quality Assurance">Quality Assurance</option>
                 <option value="Accounting">Accounting</option>
                 <option value="Legal">Legal</option>
+                <option value="IT">IT</option>
               </select>
             </div>
           </div>

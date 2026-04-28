@@ -40,7 +40,7 @@ const AppRoutes = () => {
         <Route index element={<Dashboard />} />
         <Route path="maintenance">
           <Route index element={<WorkOrderList />} />
-          <Route path="new" element={<WorkOrderForm />} />
+          <Route path="new-wo" element={<WorkOrderForm />} />
           <Route path=":id" element={<WorkOrderDetail />} />
         </Route>
         <Route path="assets" element={<AssetHierarchy />} />

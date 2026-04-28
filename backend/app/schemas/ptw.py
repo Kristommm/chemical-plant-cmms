@@ -33,5 +33,6 @@ class PTWRead(PTWBase):
     requested_by_id: int
     requested_by: Optional[UserCompact] = None
     approved_by_id: Optional[int] = None
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
