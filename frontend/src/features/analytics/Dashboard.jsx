@@ -1,42 +1,95 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Quick helper to read the User ID directly from your JWT payload
 const getUserIdFromToken = () => {
   const token = localStorage.getItem('cmms_token');
   if (!token) return null;
   try {
     // Splits the JWT and decodes the base64 payload
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub; // Our backend sets "sub" as the user_id
+    return payload.sub;
   } catch (e) {
     return null;
   }
 };
 
 const getStatusBadgeStyle = (status) => {
-  if (!status) return { bg: '#e2e8f0', text: '#475569' }; // Default Gray
-
+  if (!status) return { bg: '#e2e8f0', text: '#475569' };
   switch (status.toLowerCase().trim()) {
-    case 'open':
-      return { bg: '#dbeafe', text: '#1e40af' }; // Blue
-    case 'in progress':
-      return { bg: '#fef3c7', text: '#b45309' }; // Amber/Orange
-    case 'pending approval':
-      return { bg: '#f3e8ff', text: '#6b21a8' }; // Purple
-    case 'approved':
-    case 'active':
-    case 'implemented':
-      return { bg: '#dcfce3', text: '#15803d' }; // Green
-    case 'requested':
-    case 'engineering review':
-    case 'safety review':
-      return { bg: '#fee2e2', text: '#b91c1c' }; // Red
-    default:
-      return { bg: '#e2e8f0', text: '#475569' }; // Default Gray
+    case 'open': return { bg: '#dbeafe', text: '#1e40af' };
+    case 'in progress': return { bg: '#fef3c7', text: '#b45309' };
+    case 'pending approval': return { bg: '#f3e8ff', text: '#6b21a8' };
+    case 'approved': case 'active': case 'implemented': return { bg: '#dcfce3', text: '#15803d' };
+    case 'requested': case 'engineering review': case 'safety review': return { bg: '#fee2e2', text: '#b91c1c' };
+    default: return { bg: '#e2e8f0', text: '#475569' };
   }
 };
+
+// --- 2. Chart Configurations & Reusable Component ---
+const WO_COLORS = { 'Open': '#3b82f6', 'In Progress': '#f59e0b', 'Pending Approval': '#a855f7' };
+const PERMIT_COLORS = { 'Requested': '#f59e0b', 'Approved': '#10b981', 'Active': '#3b82f6' };
+const MOC_COLORS = { 'Engineering Review': '#f59e0b', 'Safety Review': '#ef4444', 'Approved': '#10b981', 'Implemented': '#3b82f6' };
+
+const StatusDonutChart = ({ data, colors }) => {
+  const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    const counts = data.reduce((acc, item) => {
+      // Check for either status (WO/Permits) or stage (MOCs)
+      const rawStatus = item.status || item.stage; 
+      if (!rawStatus) return acc;
+      
+      const status = rawStatus.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
+  }, [data]);
+
+  if (chartData.length === 0) return <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: '2rem', fontSize: '0.875rem' }}>No data available.</p>;
+
+  return (
+    <div style={{ width: '100%', height: 200 }}>
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie data={chartData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[entry.name] || '#cbd5e1'} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+          <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '0.75rem' }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// const getStatusBadgeStyle = (status) => {
+//   if (!status) return { bg: '#e2e8f0', text: '#475569' }; // Default Gray
+
+//   switch (status.toLowerCase().trim()) {
+//     case 'open':
+//       return { bg: '#dbeafe', text: '#1e40af' }; // Blue
+//     case 'in progress':
+//       return { bg: '#fef3c7', text: '#b45309' }; // Amber/Orange
+//     case 'pending approval':
+//       return { bg: '#f3e8ff', text: '#6b21a8' }; // Purple
+//     case 'approved':
+//     case 'active':
+//     case 'implemented':
+//       return { bg: '#dcfce3', text: '#15803d' }; // Green
+//     case 'requested':
+//     case 'engineering review':
+//     case 'safety review':
+//       return { bg: '#fee2e2', text: '#b91c1c' }; // Red
+//     default:
+//       return { bg: '#e2e8f0', text: '#475569' }; // Default Gray
+//   }
+// };
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -45,7 +98,13 @@ const Dashboard = () => {
   // New state arrays for our feeds
   const [departmentTasks, setDepartmentTasks] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
+
+  const [activeWOsList, setActiveWOsList] = useState([]); 
+  const [activePermitsList, setActivePermitsList] = useState([]); 
+  const [activeMOCsList, setActiveMOCsList] = useState([]);
+
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -67,8 +126,7 @@ const Dashboard = () => {
         const activeWOs = woRes.data.filter(wo => 
           wo.status && ['open', 'in progress', 'pending approval'].includes(wo.status.toLowerCase().trim())
         );
-
-        // --- 2. Filter Active Permits ---
+        
         const activePermits = permitRes.data.filter(permit => 
           permit.status && ['requested', 'approved', 'active'].includes(permit.status.toLowerCase().trim())
         );
@@ -77,6 +135,13 @@ const Dashboard = () => {
         const activeMOCs = mocRes.data.filter(moc => 
           moc.stage && ['engineering review', 'safety review', 'approved', 'implemented'].includes(moc.stage.toLowerCase().trim())
         );
+
+        setActiveWOsList(activeWOs);
+        setActivePermitsList(activePermits);
+        setActiveMOCsList(activeMOCs);
+
+        // --- 2. Filter Active Permits ---
+
 
         const deptTasks = activeWOs.filter(wo => {
           if (!wo.department || !userDepartment) return false;
@@ -116,8 +181,6 @@ const Dashboard = () => {
         const combinedFeed = [...normalizedWOs, ...normalizedPermits, ...normalizedMOCs]
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .slice(0, 5);
-          
-        console.log(normalizedPermits);
 
         setRecentActivities(combinedFeed);
 
@@ -167,19 +230,35 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 2. KPI Metric Cards (Unchanged) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+      {/* KPI Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <div className="action-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #ef4444', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>Active Work Orders</h3>
           <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0' }}>{loading ? '-' : metrics.activeWorkOrders}</p>
         </div>
         <div className="action-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #f59e0b', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>Pending Permits</h3>
+          <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>Active Permits</h3>
           <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0' }}>{loading ? '-' : metrics.pendingPermits}</p>
         </div>
         <div className="action-panel" style={{ padding: '1.5rem', borderLeft: '4px solid #3b82f6', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>Open MOCs</h3>
           <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: '0' }}>{loading ? '-' : metrics.openMOCs}</p>
+        </div>
+      </div>
+
+      {/* Analytics Row (Three Charts Side-by-Side) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div className="action-panel" style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '1rem', textAlign: 'center' }}>Work Order Status</h3>
+          {loading ? <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Loading...</p> : <StatusDonutChart data={activeWOsList} colors={WO_COLORS} />}
+        </div>
+        <div className="action-panel" style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '1rem', textAlign: 'center' }}>Permit Status</h3>
+          {loading ? <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Loading...</p> : <StatusDonutChart data={activePermitsList} colors={PERMIT_COLORS} />}
+        </div>
+        <div className="action-panel" style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#0f172a', fontSize: '1rem', textAlign: 'center' }}>MOC Stage</h3>
+          {loading ? <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>Loading...</p> : <StatusDonutChart data={activeMOCsList} colors={MOC_COLORS} />}
         </div>
       </div>
 
